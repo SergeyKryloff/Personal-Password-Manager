@@ -8,4 +8,6 @@ Of course, such handy features as automatic reliable password generation, sortin
 
 The application is written by Sergey Kryloff under the Delphi Community Edition environment which is available for free downloading and usage at the Embarcadero Web site https://www.embarcadero.com . It is provided to you under the GNU General Public License.
 
-Platforms: MS Windows 7, 8, 10 and later both 32- and 64-bit editions.
+Platforms: MS Windows 7, 8, 10 and later both 32- and 64-bit editions:
+
+![The application screenshot](https://sergeykryloff.github.io/Personal-Password-Manager/images/10.jpg)
