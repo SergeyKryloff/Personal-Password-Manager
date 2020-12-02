@@ -107,7 +107,8 @@ var
 
 implementation
 
-uses UITypes, ShellApi, FileCypher, InitUnit, IniFiles, Clipbrd, Functs, FindUnit,
+uses { UITypes, }
+     ShellApi, FileCypher, InitUnit, IniFiles, Clipbrd, Functs, FindUnit,
      SavePasswordUnit, OpenPasswordUnit, ShowPasswordUnit, HelpUnit, AwDialogs;
 
 {$R *.dfm}
@@ -539,6 +540,7 @@ end;
 procedure TMainForm.FindMenuItemClick(Sender: TObject);
 begin
  try FindForm.ActiveControl := FindForm.FindTextEdit except end;
+ FindForm.FindTextEdit.SelectAll();
  FindForm.Show()
 end;
 
@@ -547,7 +549,7 @@ var SearchString                                     : widestring;
     CurrentRow, OriginalRow, CurrentCol, OriginalCol : integer;
     procedure Increment(var ACol, ARow : integer);
     begin
-     Inc(ACol); if ACol = PASSWORD_COLUMN then Inc(ACol);
+     Inc(ACol);
      if ACol >= PasswordStringGrid.ColCount then begin
       ACol := 0;
       Inc(ARow);
@@ -556,7 +558,7 @@ var SearchString                                     : widestring;
     end;
     procedure Decrement(var ACol, ARow : integer);
     begin
-     Dec(ACol); if ACol = PASSWORD_COLUMN then Dec(ACol);
+     Dec(ACol);
      if ACol < 0 then begin
       ACol := PasswordStringGrid.ColCount - 1;
       Dec(ARow);
@@ -575,16 +577,18 @@ begin
   if Msg.WParam <> 0
   then Increment(CurrentCol, CurrentRow)
   else Decrement(CurrentCol, CurrentRow);
-  if Pos(SearchString, WideUpperCase(PasswordStringGrid.Cells[CurrentCol, CurrentRow])) > 0 then begin
+  if (CurrentCol <> PASSWORD_COLUMN) and
+     (Pos(SearchString, WideUpperCase(PasswordStringGrid.Cells[CurrentCol, CurrentRow])) > 0)
+  then begin
    PasswordStringGrid.Col := CurrentCol;
    PasswordStringGrid.Row := CurrentRow;
    Exit
-  end;
+  end
  until (CurrentRow = OriginalRow) and (CurrentCol = OriginalCol);
 
- FindForm.Hide();
+ // FindForm.Hide();
  MsgBox(Handle, 'No occurrences found for "' + FindForm.FindTextEdit.Text + '".', ApplicationTitleUntyped, MB_OK + MB_ICONINFORMATION);
- FindForm.Show()
+ // FindForm.Show()
 end;
 
 procedure TMainForm.PasswordStringGridDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
