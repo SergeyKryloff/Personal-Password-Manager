@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -13,13 +13,15 @@
 
 Unit FileCypher;
 
+{$MODE Delphi}
+
 Interface
 
 //-------------------------------------------------------------------
 // DecryptFileToString() decrypts file contents into a string.
 function DecryptFileToString(const SourceFileName        : WideString; // the name of the input file, an encrypted file.
                              const Password              : AnsiString; // the password string; must not be empty.
-                             var   DecryptedFileContents : AnsiString; // the descrypted data are placed to.
+                             out   DecryptedFileContents : AnsiString; // the descrypted data are placed to.
                              var   ErrorMessage          : WideString  // the error message if the function returns false.
                                                                      ) : boolean;
 
@@ -28,16 +30,16 @@ function DecryptFileToString(const SourceFileName        : WideString; // the na
 function EncryptStringToFile(const Data                : AnsiString; // the plain text data to be encrypted.
                              const DestinationFileName : WideString; // the name of the output, an encrypted file to be created.
                              const Password            : AnsiString; // the password string; must not be empty.
-                             var   ErrorMessage        : WideString  // the error message if the function returns false.
+                             out   ErrorMessage        : WideString  // the error message if the function returns false.
                             ) : boolean;
 
 Implementation
 
-uses Windows, Wcrypt2, SysUtils, InitUnit;
+uses LCLIntf, LCLType, Windows, Wcrypt2, SysUtils, Functs, InitUnit;
 
 function DecryptFileToString(const SourceFileName        : WideString; // the name of the input file, an encrypted file.
                              const Password              : AnsiString; // the password string; must not be empty.
-                             var   DecryptedFileContents : AnsiString; // the descrypted data are placed to.
+                             out   DecryptedFileContents : AnsiString; // the descrypted data are placed to.
                              var   ErrorMessage          : WideString  // the error message if the function returns false.
                                                                      ) : boolean;
 
@@ -88,7 +90,7 @@ begin
  if not CryptAcquireContext(@CryptProv, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, 0) and
     not CryptAcquireContext(@CryptProv, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_NEWKEYSET)
  then begin
-  ErrorMessage := 'CryptAcquireContext fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptAcquireContext fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_DecryptFile;
  end;
 
@@ -102,21 +104,21 @@ begin
  //-----------------------------------------------------------
  // Create a hash object.
  if not CryptCreateHash(CryptProv, CALG_MD5, 0, 0, @hHash) then begin
-  ErrorMessage := 'CryptCreateHash fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptCreateHash fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_DecryptFile;
  end;
 
  //-----------------------------------------------------------
  // Hash in the password data.
  if not CryptHashData(hHash, PBYTE(@Password[1]), Length(Password), 0) then begin
-  ErrorMessage := 'CryptHashData fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptHashData fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_DecryptFile;
  end;
 
  //-----------------------------------------------------------
  // Derive a session key from the hash object.
  if not CryptDeriveKey(CryptProv, ENCRYPT_ALGORITHM, hHash, KEYLENGTH, @hKey) then begin
-  ErrorMessage := 'CryptDeriveKey fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptDeriveKey fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_DecryptFile;
  end;
 
@@ -127,6 +129,7 @@ begin
 
  //---------------------------------------------------------------
  // Decrypt the source file, and write to the destination file.
+ dwCount := 0; Buffer[0] := 0; // to make the compiler 'happy'
  repeat
   //-----------------------------------------------------------
   // Read up to dwBlockLen bytes from the source file.
@@ -140,7 +143,7 @@ begin
   //-----------------------------------------------------------
   // Decrypt the block of data.
   if not CryptDecrypt(hKey, 0, fEOF, 0, @Buffer, @dwCount) then begin
-   ErrorMessage := 'CryptDecrypt fails with error ' + IntToStr(GetLastError());
+   ErrorMessage := 'CryptDecrypt fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
    goto Exit_DecryptFile;
   end;
 
@@ -160,28 +163,28 @@ Exit_DecryptFile:
  //---------------------------------------------------------------
  // Close files.
  if hSourceFile <> INVALID_HANDLE_VALUE
- then CloseHandle(hSourceFile);
+ then FileClose(hSourceFile); { *Converted from CloseHandle* }
 
  //-----------------------------------------------------------
  // Release the hash object.
  if (hHash <> 0) and not CryptDestroyHash(hHash)
- then ErrorMessage := 'CryptDestroyHash fauils with error ' + IntToStr(GetLastError());
+ then ErrorMessage := 'CryptDestroyHash fauils with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
 
  //---------------------------------------------------------------
  // Release the session key.
  if (hKey <> 0) and not CryptDestroyKey(hKey)
- then ErrorMessage := 'CryptDestroyKey fails with error ' + IntToStr(GetLastError());
+ then ErrorMessage := 'CryptDestroyKey fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
 
  //---------------------------------------------------------------
  // Release the provider handle.
  if (CryptProv <> 0) and not CryptReleaseContext(CryptProv, 0)
- then ErrorMessage := 'CryptReleaseContext fails with error ' + IntToStr(GetLastError());
+ then ErrorMessage := 'CryptReleaseContext fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
 end;
 
 function EncryptStringToFile(const Data                : AnsiString; // the plain text data to be encrypted.
                              const DestinationFileName : WideString; // the name of the output, an encrypted file to be created.
                              const Password            : AnsiString; // the password string; must not be empty.
-                             var   ErrorMessage        : WideString  // the error message if the function returns false.
+                             out   ErrorMessage        : WideString  // the error message if the function returns false.
                             ) : boolean;
 
 label Exit_EncryptFile;
@@ -239,7 +242,7 @@ begin
  if not CryptAcquireContext(@CryptProv, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, 0) and
     not CryptAcquireContext(@CryptProv, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_NEWKEYSET)
  then begin
-  ErrorMessage := 'CryptAcquireContext fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptAcquireContext fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_EncryptFile;
  end;
 
@@ -256,21 +259,21 @@ begin
  //-----------------------------------------------------------
  // Create a hash object.
  if not CryptCreateHash(CryptProv, CALG_MD5, 0, 0, @hHash) then begin
-  ErrorMessage := 'CryptCreateHash fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptCreateHash fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_EncryptFile;
  end;
 
  //-----------------------------------------------------------
  // Hash the password.
  if not CryptHashData(hHash, PBYTE(@Password[1]), Length(Password), 0) then begin
-  ErrorMessage := 'CryptHashData fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptHashData fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_EncryptFile;
  end;
 
  //-----------------------------------------------------------
  // Derive a session key from the hash object.
  if not CryptDeriveKey(CryptProv, ENCRYPT_ALGORITHM, hHash, KEYLENGTH, @hKey) then begin
-  ErrorMessage := 'CryptDeriveKey fails with error ' + IntToStr(GetLastError());
+  ErrorMessage := 'CryptDeriveKey fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
   goto Exit_EncryptFile;
  end;
 
@@ -282,6 +285,7 @@ begin
  //---------------------------------------------------------------
  // In a do loop, encrypt the source file,
  // and write to the source file.
+ Buffer[0] := 0; // to make the compiler 'happy'
  repeat
   //-----------------------------------------------------------
   // Pick up to dwBlockLen bytes from the source data.
@@ -295,7 +299,7 @@ begin
   //-----------------------------------------------------------
   // Encrypt data.
   if not CryptEncrypt(hKey, 0, fEOF, 0, @Buffer, @dwCount, BUFFER_LENGTH) then begin
-   ErrorMessage := 'CryptEncrypt fails with error ' + IntToStr(GetLastError());
+   ErrorMessage := 'CryptEncrypt fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
    goto Exit_EncryptFile;
   end;
 
@@ -319,23 +323,23 @@ Exit_EncryptFile:
  // Close files.
  if hDestinationFile <> INVALID_HANDLE_VALUE then begin
   SetEndOfFile(hDestinationFile);
-  CloseHandle(hDestinationFile);
+  FileClose(hDestinationFile); { *Converted from CloseHandle* }
  end;
 
  //-----------------------------------------------------------
  // Release the hash object.
  if (hHash <> 0) and not CryptDestroyHash(hHash)
- then ErrorMessage := 'CryptDestroyHash fails with error ' + IntToStr(GetLastError());
+ then ErrorMessage := 'CryptDestroyHash fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
 
  //---------------------------------------------------------------
  // Release the session key.
  if (hKey <> 0) and not CryptDestroyKey(hKey)
- then ErrorMessage := 'CryptDestroyKey fails with error ' + IntToStr(GetLastError());
+ then ErrorMessage := 'CryptDestroyKey fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
 
  //---------------------------------------------------------------
  // Release the provider handle.
  if (CryptProv <> 0) and not CryptReleaseContext(CryptProv, 0)
- then ErrorMessage := 'CryptReleaseContext fails with error ' + IntToStr(GetLastError());
+ then ErrorMessage := 'CryptReleaseContext fails with error ' + StrToUnicodeUnderCodePage(IntToStr(GetLastError()), CP_UTF8);
 end; // Encryptfile()
 
 End.
