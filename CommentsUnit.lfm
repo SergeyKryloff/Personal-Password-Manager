@@ -1,0 +1,27 @@
+object CommentsForm: TCommentsForm
+  Left = 413
+  Top = 237
+  Width = 513
+  Height = 291
+  BorderIcons = [biSystemMenu, biMaximize]
+  BorderStyle = bsSizeToolWin
+  Caption = 'Comments'
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  Position = poMainFormCenter
+  PixelsPerInch = 96
+  object CommentsMemo: TMemo
+    Left = 0
+    Top = 0
+    Width = 497
+    Height = 253
+    Align = alClient
+    ScrollBars = ssBoth
+    TabOrder = 0
+    OnKeyPress = CommentsMemoKeyPress
+  end
+end
