@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -13,14 +13,20 @@
 
 unit MainUnit;
 
+{$MODE Delphi}
+
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  LCLIntf, LCLType, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ExtCtrls, Grids, Menus;
 
 type
+
+  { TMainForm }
+
   TMainForm = class(TForm)
+    ExitWithoutSavingMainMenuItem: TMenuItem;
     Timer: TTimer;
     PasswordStringGrid: TStringGrid;
     MainMenu: TMainMenu;
@@ -54,7 +60,14 @@ type
     OpenMainMenuItem: TMenuItem;
     SaveMainMenuItem: TMenuItem;
     StopEditingMainMenuItem: TMenuItem;
+    procedure ExitWithoutSavingMainMenuItemClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure PasswordStringGridKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure PasswordStringGridKeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure PasswordStringGridSetEditText(Sender: TObject; ACol,
+      ARow: Integer; const Value: string);
     procedure TimerTimer(Sender: TObject);
     procedure EditMenuItemClick(Sender: TObject);
     procedure PasswordStringGridSelectCell(Sender: TObject; ACol,
@@ -95,8 +108,8 @@ type
     Password                           : WideString;
     DataModified                       : boolean;
     OriginalToggleEditingMainMenuItemShortCut, OriginalStopEditingMainMenuItemShortCut : TShortCut;
-    function LoadData(var ErrorMessage : WideString) : boolean;
-    function SaveData(var ErrorMessage : WideString) : boolean;
+    function LoadData(out ErrorMessage : WideString) : boolean;
+    function SaveData(out ErrorMessage : WideString) : boolean;
     procedure FindItem(var Msg : TMessage); message WM_USER + 1;
   public
     { Public declarations }
@@ -108,11 +121,13 @@ var
 implementation
 
 uses { UITypes, }
-     ShellApi, FileCypher, InitUnit, IniFiles, Clipbrd, Functs, FindUnit,
-     SavePasswordUnit, OpenPasswordUnit, ShowPasswordUnit, HelpUnit, AwDialogs;
+     Windows, FileCypher, InitUnit, IniFiles, Clipbrd, Functs, FindUnit,
+     SavePasswordUnit, OpenPasswordUnit, ShowPasswordUnit, HelpUnit,
+     CommentsUnit;
 
-{$R *.dfm}
-{$R help.res} // navigate to "res://C:\.....\PssMngr.exe/HELP_ENTRY"
+{$R *.lfm}
+{$R WindowsXP.res}
+{$R help.res} // navigate browser to "res://C:\.....\PssMngr.exe/HELP_ENTRY"
 
 const TAB : ansichar = #9;
       DESCRIPTION_COLUMN = 0;
@@ -140,6 +155,8 @@ const TAB : ansichar = #9;
         'If you can''t memorize the keyword, consider your passwords to be lost.'#13#10#13#10 +
         'Would you like to back up the file with passwords and start working with an empty one?';
 
+var EXE_NAME : WideString; // initialized in the Initialization section
+
 function AnsiCharPos(const c : ansichar; const S : ansistring) : integer;
 var i : integer;
 begin
@@ -151,13 +168,13 @@ begin
  Result := 0;
 end;
 
-function TMainForm.LoadData(var ErrorMessage : WideString) : boolean;
+function TMainForm.LoadData(out ErrorMessage : WideString) : boolean;
 var S, DecryptedFileContents  : AnsiString;
     i, CurrentRow, ReadOffset : Integer;
     FileName                  : WideString;
 begin
  ErrorMessage := '';
- FileName := ChangeFileExt(ParamStr(0), '.csv');
+ FileName := StrToUnicodeUnderCodePage(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.csv'), CP_UTF8);
  if not FileExists(FileName) then begin
   PasswordStringGrid.RowCount := 2;
   for i := 0 to PasswordStringGrid.ColCount - 1 do PasswordStringGrid.Cells[i, PasswordStringGrid.RowCount - 1] := '';
@@ -165,7 +182,7 @@ begin
   Exit
  end;
 
- Result := DecryptFileToString(FileName, AnsiString(Password), DecryptedFileContents, ErrorMessage);
+ Result := DecryptFileToString(FileName, UnicodeToStrUnderCodePage(Password, CP_UTF8, Nil), DecryptedFileContents, ErrorMessage);
  if not Result then Exit;
  Result := (Length(DecryptedFileContents) >= FILE_SUFFIX_LENGTH) and
            (Copy(DecryptedFileContents, Length(DecryptedFileContents) - FILE_SUFFIX_LENGTH + 1, FILE_SUFFIX_LENGTH) = FILE_SUFFIX);
@@ -186,22 +203,22 @@ begin
   then PasswordStringGrid.RowCount := PasswordStringGrid.RowCount + 1;
 
   i := AnsiCharPos(TAB, S); if i <= 0 then i := Length(S) + 1;
-  PasswordStringGrid.Cells[DESCRIPTION_COLUMN, CurrentRow] := StrToUnicodeUnderCodePage(copy(S, 1, i - 1), CP_UTF8);
+  PasswordStringGrid.Cells[DESCRIPTION_COLUMN, CurrentRow] := copy(S, 1, i - 1);
   Delete(S, 1, i);
 
   i := AnsiCharPos(TAB, S); if i <= 0 then i := Length(S) + 1;
-  PasswordStringGrid.Cells[LOGIN_COLUMN, CurrentRow] := StrToUnicodeUnderCodePage(copy(S, 1, i - 1), CP_UTF8);
+  PasswordStringGrid.Cells[LOGIN_COLUMN, CurrentRow] := copy(S, 1, i - 1);
   Delete(S, 1, i);
 
   i := AnsiCharPos(TAB, S); if i <= 0 then i := Length(S) + 1;
-  PasswordStringGrid.Cells[PASSWORD_COLUMN, CurrentRow] := StrToUnicodeUnderCodePage(copy(S, 1, i - 1), CP_UTF8);
+  PasswordStringGrid.Cells[PASSWORD_COLUMN, CurrentRow] := copy(S, 1, i - 1);
   Delete(S, 1, i);
 
   i := AnsiCharPos(TAB, S); if i <= 0 then i := Length(S) + 1;
-  PasswordStringGrid.Cells[URL_COLUMN, CurrentRow] := StrToUnicodeUnderCodePage(copy(S, 1, i - 1), CP_UTF8);
+  PasswordStringGrid.Cells[URL_COLUMN, CurrentRow] := copy(S, 1, i - 1);
   Delete(S, 1, i);
 
-  PasswordStringGrid.Cells[COMMENTS_COLUMN, CurrentRow] := StrToUnicodeUnderCodePage(S, CP_UTF8)
+  PasswordStringGrid.Cells[COMMENTS_COLUMN, CurrentRow] := S
  end;
 
  i := PasswordStringGrid.RowCount - 1;
@@ -216,26 +233,29 @@ begin
  end
 end;
 
-function TMainForm.SaveData(var ErrorMessage : WideString) : boolean;
-var Data         : AnsiString;
-    Row          : Integer;
+function TMainForm.SaveData(out ErrorMessage : WideString) : boolean;
+var Data : AnsiString;
+    Row  : Integer;
 begin
  Data := '';
  for Row := 1 to PasswordStringGrid.RowCount - 1
  do Data := Data +
-            UnicodeToStrUnderCodePage(PasswordStringGrid.Cells[DESCRIPTION_COLUMN, Row], CP_UTF8, Nil) + TAB +
-            UnicodeToStrUnderCodePage(PasswordStringGrid.Cells[LOGIN_COLUMN, Row],       CP_UTF8, Nil) + TAB +
-            UnicodeToStrUnderCodePage(PasswordStringGrid.Cells[PASSWORD_COLUMN, Row],    CP_UTF8, Nil) + TAB +
-            UnicodeToStrUnderCodePage(PasswordStringGrid.Cells[URL_COLUMN, Row],         CP_UTF8, Nil) + TAB +
-            UnicodeToStrUnderCodePage(PasswordStringGrid.Cells[COMMENTS_COLUMN, Row],    CP_UTF8, Nil) + #10;
+            PasswordStringGrid.Cells[DESCRIPTION_COLUMN, Row] + TAB +
+            PasswordStringGrid.Cells[LOGIN_COLUMN, Row]       + TAB +
+            PasswordStringGrid.Cells[PASSWORD_COLUMN, Row]    + TAB +
+            PasswordStringGrid.Cells[URL_COLUMN, Row]         + TAB +
+            PasswordStringGrid.Cells[COMMENTS_COLUMN, Row]    + #10;
  Data := Data + FILE_SUFFIX;
- Result := EncryptStringToFile(Data, ChangeFileExt(ParamStr(0), '.csv'), AnsiString(Password), ErrorMessage);
+ Result := EncryptStringToFile(Data,
+                               StrToUnicodeUnderCodePage(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.csv'), CP_UTF8),
+                               UnicodeToStrUnderCodePage(Password, CP_UTF8, Nil),
+                               ErrorMessage);
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 var INIFile      : TIniFile;
     ErrorMessage : WideString;
-    i            : integer;
+    i, j, k, l   : integer;
 begin
  Caption := ApplicationTitleUntyped + ' - ' + NoWindowCaptured;
  PasswordWindow := 0;
@@ -249,7 +269,7 @@ begin
  PasswordStringGrid.Cells[COMMENTS_COLUMN, 0]    := 'Comments';
  PasswordStringGrid.Visible := LoadData(ErrorMessage);
  DataModified := false;
- INIFile := TIniFile.Create(ChangeFileExt(ParamStr(0), '.ini'));
+ INIFile := TIniFile.Create(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.ini'));
  try
   PasswordStringGrid.ColWidths[DESCRIPTION_COLUMN] :=
   INIFile.ReadInteger(SettingsSection, PasswordStringGrid.Cells[DESCRIPTION_COLUMN, 0], DESCRIPTION_DEFAULT_WIDTH);
@@ -265,43 +285,57 @@ begin
 
   // restoring the window position and internal layout:
   i := INIFile.ReadInteger(WindowSection, LeftItem, MaxInt);
-  if i <> MaxInt then Left := i;
-  i := INIFile.ReadInteger(WindowSection, TopItem, MaxInt);
-  if i <> MaxInt then Top := i;
-  i := INIFile.ReadInteger(WindowSection, WidthItem, MaxInt);
-  if (i <> MaxInt) and (i >= Constraints.MinWidth) then Width := i;
-  i := INIFile.ReadInteger(WindowSection, HeightItem, MaxInt);
-  if (i <> Maxint) and (i >= Constraints.MinHeight) then Height := i;
+  j := INIFile.ReadInteger(WindowSection, TopItem, MaxInt);
+  k := INIFile.ReadInteger(WindowSection, WidthItem, MaxInt);
+  l := INIFile.ReadInteger(WindowSection, HeightItem, MaxInt);
+  if (i <> MaxInt) and (j <> MaxInt) and
+     (k <> MaxInt) and (k >= Constraints.MinWidth) and
+     (l <> MaxInt) and (l >= Constraints.MinHeight)
+  then begin
+   Left := i;
+   Top  := j;
+   Width := k;
+   Height := l;
+  end else begin
+   Left := 0;
+   Top  := 0;
+   Width := Constraints.MinWidth;
+   Height := Constraints.MinHeight;
+  end;
   // adjusting the width:
-  if Left < Screen.WorkAreaRect.Left then Left := Screen.WorkAreaRect.Left;
-  if Left + Width > Screen.WorkAreaRect.Right then begin
-   if Screen.WorkAreaRect.Right - Left > Constraints.MinWidth
-   then Width := Screen.WorkAreaRect.Right - Left
+  i := Screen.WorkAreaRect.Left;
+  j := Screen.WorkAreaRect.Top;
+  k := Screen.WorkAreaRect.Width - 8;
+  l := Screen.WorkAreaRect.Height - 32;
+  if Left < i then Left := i;
+  if Left + Width > i + k then begin
+   if i + k - Left > Constraints.MinWidth
+   then Width := i + k - Left
    else Width := Constraints.MinWidth;
-   if Left + Width { still } > Screen.WorkAreaRect.Right then begin
-    Left := Screen.WorkAreaRect.Right - Width;
-    if Left < Screen.WorkAreaRect.Left then begin
-     Left := Screen.WorkAreaRect.Left;
+   if Left + Width { still } > i + k then begin
+    Left := i + k - Width;
+    if Left < i then begin
+     Left := i;
      Width := Constraints.MinWidth
     end
    end
   end;
   // adjusting the height:
-  if Top < Screen.WorkAreaRect.Top then Top := Screen.WorkAreaRect.Top;
-  if Top + Height > Screen.WorkAreaRect.Bottom then begin
-   if Screen.WorkAreaRect.Bottom - Top > Constraints.MinHeight
-   then Height := Screen.WorkAreaRect.Bottom - Top
+  if Top < j then Top := j;
+  if Top + Height > j + l then begin
+   if j + l - Top > Constraints.MinHeight
+   then Height := j + l - Top
    else Height := Constraints.MinHeight;
-   if Top + Height { still } > Screen.WorkAreaRect.Bottom then begin
-    Top := Screen.WorkAreaRect.Bottom - Height;
-    if Top < Screen.WorkAreaRect.Top then begin
-     Top := Screen.WorkAreaRect.Top;
+   if Top + Height { still } > j + l then begin
+    Top := j + l - Height;
+    if Top < j then begin
+     Top := j;
      Height := Constraints.MinHeight
     end
    end
   end;
   if INIFile.ReadInteger(WindowSection, WindowMaximizedItem, 0) <> 0 // restoring maximized:
-  then WindowState := wsMaximized; // PostMessage(Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+  then PostMessage(Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
   // End of restoring the window position and internal layout
  except
  end;
@@ -310,6 +344,45 @@ begin
  PasswordStringGrid.EditorMode := false;
  OriginalToggleEditingMainMenuItemShortCut := ToggleEditingMainMenuItem.ShortCut;
  OriginalStopEditingMainMenuItemShortCut := StopEditingMainMenuItem.ShortCut;
+end;
+
+procedure TMainForm.ExitWithoutSavingMainMenuItemClick(Sender: TObject);
+begin
+ if not DataModified then begin Close(); Exit end;
+ if Application.MessageBox('Would you like to exit and discard the changes you might have made during this session?',
+                           ApplicationTitleUntyped, MB_YESNO + MB_ICONQUESTION) <> IDYES
+ then Exit; // do nothing
+ DataModified := False;
+ Close();
+end;
+
+procedure TMainForm.PasswordStringGridKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+ if (Key = 13) and (Shift = []) then Key := 0; // to prevent selection of the grid cell text
+end;
+
+procedure TMainForm.PasswordStringGridKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+var row : integer;
+begin
+ // The main menu ctrl+up/down shortcuts do not work in Lazarus grids, so handling them here.
+ if (key = 38) and (Shift = [ssCtrl]) then begin
+  MoveUpMenuItemClick(Sender);
+  row := PasswordStringGrid.Row;
+  if (1 < row) and (row < PasswordStringGrid.RowCount) then PasswordStringGrid.Row := row + 1;
+  Exit
+ end;
+ if (key = 40) and (Shift = [ssCtrl]) then begin
+  MoveDownMenuItemClick(Sender);
+  row := PasswordStringGrid.Row;
+  if (1 < row) and (row <= PasswordStringGrid.RowCount) then PasswordStringGrid.Row := row - 1;
+ end;
+end;
+
+procedure TMainForm.PasswordStringGridSetEditText(Sender: TObject; ACol,
+  ARow: Integer; const Value: string);
+begin
+ DataModified := True;
 end;
 
 procedure TMainForm.FormResize(Sender: TObject);
@@ -376,10 +449,10 @@ begin
   PasswordStringGrid.Col := Col;
   PasswordStringGrid.Row := Row
  end else begin
+  PasswordStringGrid.OnMouseUp :=  Nil;
   PasswordStringGrid.Options := PasswordStringGrid.Options + [goEditing];
   PasswordStringGrid.EditorMode := true;
-  PasswordStringGrid.OnMouseUp :=  Nil;
-  DataModified := true;
+  PostMessage(GetFocus(), EM_SETSEL, 0, 0);
  end
 end;
 
@@ -397,20 +470,19 @@ end;
 
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 var INIFile      : TIniFile;
-    WndPlacement : TWindowPlacement;
     ErrorMessage : WideString;
 begin
  if DataModified and not SaveData(ErrorMessage) then begin
-  case MsgBox(Handle, 'Unable to save data due to the following reason: ' +
-                      ErrorMessage +
-                      #13#10#13#10'Would you like to discard the changes you might have made during this session?',
+  case Application.MessageBox(PChar('Unable to save data due to the following reason: ' +
+                      UnicodeToStrUnderCodePage(ErrorMessage, CP_UTF8, Nil) +
+                      #13#10#13#10'Would you like to exit and discard the changes you might have made during this session?'),
                       ApplicationTitleUntyped, MB_ICONQUESTION + MB_YESNO + MB_DEFBUTTON2) of
    ID_NO  : begin CanClose := false; Exit end;
    ID_YES : { do nothing };
    else     { do nothing };
   end // case
  end;
- INIFile := TIniFile.Create(ChangeFileExt(ParamStr(0), '.ini'));
+ INIFile := TIniFile.Create(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.ini'));
  try
   INIFile.WriteInteger(SettingsSection, PasswordStringGrid.Cells[DESCRIPTION_COLUMN, 0], PasswordStringGrid.ColWidths[DESCRIPTION_COLUMN]);
   INIFile.WriteInteger(SettingsSection, PasswordStringGrid.Cells[LOGIN_COLUMN, 0],       PasswordStringGrid.ColWidths[LOGIN_COLUMN]);
@@ -419,19 +491,14 @@ begin
 
   // saving the main window placement and state:
   INIFile.WriteInteger(WindowSection, WindowMaximizedItem, Byte(WindowState = wsMaximized));
-  FillChar(WndPlacement, sizeof(WndPlacement), 0);
-  WndPlacement.Length := sizeof(WndPlacement);
-  if not GetWindowPlacement(Handle, @WndPlacement) then begin
-   // to ignore when loading:
-   WndPlacement.rcNormalPosition.Left   := MaxInt;
-   WndPlacement.rcNormalPosition.Top    := MaxInt;
-   WndPlacement.rcNormalPosition.Right  := MaxInt;
-   WndPlacement.rcNormalPosition.Bottom := MaxInt
+  if WindowState <> wsNormal then begin
+   WindowState := wsNormal;
+   Application.ProcessMessages();
   end;
-  INIFile.WriteInteger(WindowSection, LeftItem, WndPlacement.rcNormalPosition.Left);
-  INIFile.WriteInteger(WindowSection, TopItem, WndPlacement.rcNormalPosition.Top);
-  INIFile.WriteInteger(WindowSection, WidthItem, WndPlacement.rcNormalPosition.Right - WndPlacement.rcNormalPosition.Left);
-  INIFile.WriteInteger(WindowSection, HeightItem, WndPlacement.rcNormalPosition.Bottom - WndPlacement.rcNormalPosition.Top);
+  INIFile.WriteInteger(WindowSection, LeftItem, Left);
+  INIFile.WriteInteger(WindowSection, TopItem, Top);
+  INIFile.WriteInteger(WindowSection, WidthItem, Width);
+  INIFile.WriteInteger(WindowSection, HeightItem, Height);
  except
  end;
  INIFile.Free();
@@ -439,6 +506,7 @@ end;
 
 procedure TMainForm.PasswordStringGridDoubleClick(Sender: TObject);
 var TextToType             : WideString;
+    S                      : AnsiString;
     CurrentCol, CurrentRow : integer;
 begin
  CurrentRow := PasswordStringGrid.Row;
@@ -447,19 +515,29 @@ begin
     (CurrentCol < 0)  or (CurrentCol >= PasswordStringGrid.ColCount)
  then Exit;
  case CurrentCol of
-  DESCRIPTION_COLUMN, COMMENTS_COLUMN : { do nothing };
+  DESCRIPTION_COLUMN : { do nothing };
+  COMMENTS_COLUMN : begin
+   S := StrRepl(PasswordStringGrid.Cells[CurrentCol, CurrentRow], #32#9, #13#10);
+   CommentsForm.CommentsMemo.Text := S;
+   CommentsForm.ShowModal();
+   if CommentsForm.CommentsMemo.Text <> S then begin
+    PasswordStringGrid.Cells[CurrentCol, CurrentRow] := StrRepl(CommentsForm.CommentsMemo.Text, #13#10, #32#9);
+    DataModified := True;
+   end;
+  end;
   LOGIN_COLUMN, PASSWORD_COLUMN : begin
-   TextToType := PasswordStringGrid.Cells[CurrentCol, CurrentRow];
+   TextToType := StrToUnicodeUnderCodePage(PasswordStringGrid.Cells[CurrentCol, CurrentRow], CP_UTF8);
    if (PasswordWindow <> 0) and IsWindow(PasswordWindow) and (TextToType <> '') then begin
     SetForegroundWindow(PasswordWindow);
     SendText(TextToType)
    end
   end;
   URL_COLUMN : begin
-   TextToType := PasswordStringGrid.Cells[CurrentCol, CurrentRow];
+   TextToType := StrToUnicodeUnderCodePage(PasswordStringGrid.Cells[CurrentCol, CurrentRow], CP_UTF8);
    if TextToType <> '' then begin
     if ShellExecuteW(handle, 'open', PWideChar(TextToType), Nil, Nil, SW_SHOW) <= 32
-    then MsgBox(Handle, 'Error opening ' + TextToType, ApplicationTitleUntyped, MB_OK + MB_ICONINFORMATION)
+    then Application.MessageBox(PChar('Error opening ' + UnicodeToStrUnderCodePage(TextToType, CP_UTF8, Nil)),
+                                ApplicationTitleUntyped, MB_OK + MB_ICONINFORMATION)
    end
   end
   // else do nothing
@@ -468,8 +546,7 @@ end;
 
 procedure TMainForm.AboutMenuItemClick(Sender: TObject);
 begin
- if HelpForm.WebBrowser.LocationURL = '' then HelpForm.WebBrowser.Navigate('res://' + ParamStr(0) + '/HELP_ENTRY');
- HelpForm.Show()
+ HelpUnit.ShowHelp('res://' + EXE_NAME + '/HELP_ENTRY')
 end;
 
 procedure TMainForm.DeleteRowMenuItemClick(Sender: TObject);
@@ -477,6 +554,10 @@ var CurrentRow, Row, Col : integer;
 begin
  CurrentRow := PasswordStringGrid.Row;
  if (CurrentRow <= 0) or (CurrentRow >= PasswordStringGrid.RowCount) then Exit;
+
+ if Application.MessageBox('Delete the selected row, are you sure?',
+                           ApplicationTitleUntyped, MB_YESNO + MB_ICONQUESTION) <> IDYES
+ then Exit;
 
  if PasswordStringGrid.EditorMode
  then EditMenuItemClick(Sender);
@@ -509,7 +590,7 @@ end;
 
 procedure TMainForm.MoveUpMenuItemClick(Sender: TObject);
 var CurrentRow, Col : integer;
-    Tmp             : WideString;
+    Tmp             : String;
 begin
  CurrentRow := PasswordStringGrid.Row;
  if (CurrentRow <= 1) or (CurrentRow >= PasswordStringGrid.RowCount) then Exit;
@@ -524,7 +605,7 @@ end;
 
 procedure TMainForm.MoveDownMenuItemClick(Sender: TObject);
 var CurrentRow, Col : integer;
-    Tmp             : WideString;
+    Tmp             : String;
 begin
  CurrentRow := PasswordStringGrid.Row;
  if (CurrentRow <= 0) or (CurrentRow + 1 >= PasswordStringGrid.RowCount) then Exit;
@@ -567,7 +648,7 @@ var SearchString                                     : widestring;
     end;
 begin
  Msg.Result := 0;
- SearchString := WideUppercase(FindForm.FindTextEdit.Text);
+ SearchString := WideUppercase(StrToUnicodeUnderCodePage(FindForm.FindTextEdit.Text, CP_UTF8));
  CurrentRow := LongMin(LongMax(PasswordStringGrid.Row, 1), PasswordStringGrid.RowCount - 1);
  OriginalRow := CurrentRow;
  CurrentCol := LongMin(LongMax(PasswordStringGrid.Col, 0), PasswordStringGrid.ColCount - 1);
@@ -578,7 +659,7 @@ begin
   then Increment(CurrentCol, CurrentRow)
   else Decrement(CurrentCol, CurrentRow);
   if (CurrentCol <> PASSWORD_COLUMN) and
-     (Pos(SearchString, WideUpperCase(PasswordStringGrid.Cells[CurrentCol, CurrentRow])) > 0)
+     (Pos(SearchString, WideUpperCase(StrToUnicodeUnderCodePage(PasswordStringGrid.Cells[CurrentCol, CurrentRow], CP_UTF8))) > 0)
   then begin
    PasswordStringGrid.Col := CurrentCol;
    PasswordStringGrid.Row := CurrentRow;
@@ -587,12 +668,12 @@ begin
  until (CurrentRow = OriginalRow) and (CurrentCol = OriginalCol);
 
  // FindForm.Hide();
- MsgBox(Handle, 'No occurrences found for "' + FindForm.FindTextEdit.Text + '".', ApplicationTitleUntyped, MB_OK + MB_ICONINFORMATION);
+ Application.MessageBox(PChar('No occurrences found for "' + FindForm.FindTextEdit.Text + '".'), ApplicationTitleUntyped, MB_OK + MB_ICONINFORMATION);
  // FindForm.Show()
 end;
 
 procedure TMainForm.PasswordStringGridDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
-var StringToDraw                       : WideString;
+var StringToDraw                       : String;
     i, TextWidth, SpaceWidth, TextLeft : integer;
 begin
  PasswordStringGrid.Canvas.Brush.Style := bsClear;
@@ -630,6 +711,7 @@ begin
    then PasswordStringGrid.Canvas.Font.Color := clWindowText
    else PasswordStringGrid.Canvas.Font.Color := clInactiveCaptionText;
   end;
+  PasswordStringGrid.Canvas.FillRect(Rect);
   PasswordStringGrid.Canvas.Font.Style := PasswordStringGrid.Canvas.Font.Style - [fsBold];
   PasswordStringGrid.Canvas.TextRect(Rect, Rect.Left + 2, Rect.Top + 2, StringToDraw)
  end { Row <> 0 }
@@ -641,6 +723,7 @@ var ScreenCursorPoint, CursorPoint : TPoint;
 begin
  if (Button = mbRight) and GetCursorPos(ScreenCursorPoint) then begin
   CursorPoint := PasswordStringGrid.ScreenToClient(ScreenCursorPoint);
+  ACol := 0; ARow := 0; // to make the compiler 'happy'
   PasswordStringGrid.MouseToCell(CursorPoint.X, CursorPoint.Y, ACol, ARow);
   if (0 < ARow) and (ARow < PasswordStringGrid.RowCount) and
      (0 <= ACol) and (ACol < PasswordStringGrid.ColCount)
@@ -797,7 +880,7 @@ begin
   UndoMainMenuItem.Enabled := SendMessage(FocusWindow, EM_CANUNDO, 0, 0) <> 0;
   Undo1MainMenuItem.Enabled := UndoMainMenuItem.Enabled;
   TextLen := SendMessage(FocusWindow, WM_GETTEXTLENGTH, 0, 0);
-  SendMessage(FocusWindow, EM_GETSEL, wParam(@SelStart), lParam(@SelEnd));
+  {$hints off} SendMessage(FocusWindow, EM_GETSEL, wParam(@SelStart), lParam(@SelEnd)); {$hints on}
   TextSelected := SelEnd - SelStart > 0;
   CutMainMenuItem.Enabled := TextSelected;
   CopyMainMenuItem.Enabled := TextSelected;
@@ -829,10 +912,10 @@ begin
  Application.CreateForm(TOpenPasswordForm, OpenPasswordForm);
  if Password = DEFAULT_PASSWORD
  then OpenPasswordForm.PasswordEdit.Text := ''
- else OpenPasswordForm.PasswordEdit.Text := Password;
+ else OpenPasswordForm.PasswordEdit.Text := UnicodeToStrUnderCodePage(Password, CP_UTF8, Nil);
  OpenPasswordForm.ShowModal();
  if OpenPasswordForm.OkPressed then begin
-  Password := OpenPasswordForm.PasswordEdit.Text;
+  Password := StrToUnicodeUnderCodePage(OpenPasswordForm.PasswordEdit.Text, CP_UTF8);
   if Password = '' then Password := DEFAULT_PASSWORD;
   if LoadData(ErrorMessage) then begin
    PasswordStringGrid.Visible := true;
@@ -840,21 +923,33 @@ begin
    DataModified := false
   end else begin
    if ErrorMessage = ERROR_MESSAGE_WRONG_PASWORD then begin
-    if MsgBox(handle, ErrorMessage, ApplicationTitleUntyped, MB_YESNO + MB_ICONQUESTION + MB_DEFBUTTON2) = ID_YES then begin
-     if CopyFile(PChar(ChangeFileExt(ParamStr(0), '.csv')), PChar(ChangeFileExt(ParamStr(0), '.bak')), false) and
-        DeleteFile(ChangeFileExt(ParamStr(0), '.csv'))
+    if Application.MessageBox(PChar(UnicodeToStrUnderCodePage(ErrorMessage, CP_UTF8, Nil)),
+       ApplicationTitleUntyped, MB_YESNO + MB_ICONQUESTION + MB_DEFBUTTON2) = ID_YES
+    then begin
+     if Windows.CopyFileW(
+          PWideChar(StrToUnicodeUnderCodePage(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.csv'), CP_UTF8)),
+          PWideChar(StrToUnicodeUnderCodePage(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.bak'), CP_UTF8)),
+          false)
+        and Windows.DeleteFileW(PWideChar(StrToUnicodeUnderCodePage(ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.csv'), CP_UTF8)))
      then begin
       PasswordStringGrid.Visible := true;
       FormResize(Sender);
       DataModified := false;
       Password := DEFAULT_PASSWORD;
-      MsgBox(Handle, 'The file '#13#10 + ChangeFileExt(ParamStr(0), '.csv') + #13#10'has been copied into'#13#10 + ChangeFileExt(ParamStr(0), '.bak') +
-             #13#10#13#10'To restore the original file in the future, close this application, copy the file in the reverse order manually, and restart Password Manager.',
+      Application.MessageBox(PChar('The file '#13#10 +
+             ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.csv') +
+             #13#10'has been copied into'#13#10 +
+             ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.bak') +
+             #13#10#13#10'To restore the original file in the future, ' +
+             'close this application, copy the file in the reverse order manually, and restart Password Manager.'),
              ApplicationTitleUntyped, MB_OK + MB_ICONINFORMATION);
-     end else MsgBox(handle, 'Unable to rename ' + ChangeFileExt(ParamStr(0), '.csv') + ' into ' + ChangeFileExt(ParamStr(0), '.bak'),
-                     ApplicationTitleUntyped, MB_OK + MB_ICONSTOP)
+     end else Application.MessageBox(PChar('Unable to rename ' +
+                                           ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.csv') +
+                                           ' into ' +
+                                           ChangeFileExt(UnicodeToStrUnderCodePage(EXE_NAME, CP_UTF8, Nil), '.bak')),
+                                     ApplicationTitleUntyped, MB_OK + MB_ICONSTOP)
     end
-   end else MsgBox(handle, ErrorMessage, ApplicationTitleUntyped, MB_OK + MB_ICONSTOP)
+   end else Windows.MessageBoxW(Handle, PWideChar(ErrorMessage), ApplicationTitleUntyped, MB_OK + MB_ICONSTOP)
   end
  end;
  OpenPasswordForm.Free();
@@ -867,12 +962,12 @@ begin
  Application.CreateForm(TSavePasswordForm, SavePasswordForm);
  if Password = DEFAULT_PASSWORD
  then SavePasswordForm.PasswordEdit.Text := ''
- else SavePasswordForm.PasswordEdit.Text := Password;
+ else SavePasswordForm.PasswordEdit.Text := UnicodeToStrUnderCodePage(Password, CP_UTF8, Nil);
  SavePasswordForm.ConfirmPasswordEdit.Text := SavePasswordForm.PasswordEdit.Text;
  SavePasswordForm.ShowModal();
  if SavePasswordForm.OkPressed then begin
   WasPassword := Password;
-  Password := SavePasswordForm.PasswordEdit.Text;
+  Password := StrToUnicodeUnderCodePage(SavePasswordForm.PasswordEdit.Text, CP_UTF8);
   if Password = '' then Password := DEFAULT_PASSWORD;
   if SaveData(ErrorMessage) then begin
    DataModified := false;
@@ -883,9 +978,15 @@ begin
     ShowPasswordForm.ShowKeywordCheckBox.Checked := false;
     ShowPasswordForm.Show()
    end
-  end else MsgBox(handle, ErrorMessage, ApplicationTitleUntyped, MB_OK + MB_ICONSTOP)
+  end else Application.MessageBox(PChar(UnicodeToStrUnderCodePage(ErrorMessage, CP_UTF8, Nil)),
+                                  ApplicationTitleUntyped, MB_OK + MB_ICONSTOP)
  end;
  SavePasswordForm.Free();
 end;
+
+Initialization
+ EXE_NAME := ''; // to make the compiler happy
+ SetLength(EXE_NAME, MAX_PATH);
+ SetLength(EXE_NAME, GetModuleFileNameW(hInstance, PWideChar(EXE_NAME), MAX_PATH));
 
 End.
