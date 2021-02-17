@@ -32,7 +32,7 @@
 { obtain a copy of the License at                                  }
 { http://www.mozilla.org/MPL/MPL-1.1.html                          }
 {                                                                  }
-{ Software distributed under the License is distributed on an      }
+{ Software distributed under the License is provided on an         }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or }
 { implied. See the License for the specific language governing     }
 { rights and limitations under the License.                        }
@@ -639,11 +639,11 @@ type
   end;
 
 type
-  HCRYPTPROV  = ULONG;
+  HCRYPTPROV  = ULONG_PTR;
   PHCRYPTPROV = ^HCRYPTPROV;
-  HCRYPTKEY   = ULONG;
+  HCRYPTKEY   = ULONG_PTR;
   PHCRYPTKEY  = ^HCRYPTKEY;
-  HCRYPTHASH  = ULONG;
+  HCRYPTHASH  = ULONG_PTR;
   PHCRYPTHASH = ^HCRYPTHASH;
 
 function CryptAcquireContextA(phProv       :PHCRYPTPROV;
