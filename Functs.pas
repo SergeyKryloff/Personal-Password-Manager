@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -13,9 +13,11 @@
 
 Unit Functs;
 
+{$MODE Delphi}
+
 Interface
 
-uses Windows;
+uses LCLIntf, LCLType;
 
 type TANsiCharSet = set of AnsiChar;
 
@@ -28,16 +30,17 @@ function UnicodeToStrUnderCodePage(const S               : WideString;
                                          UnmappablePChar : Pointer) : ANSIString;
 // Returns a Windows handle of the currently focused control and
 // the foreground window caption. To activate it later, use SetForegroundWindow()
-function GetCurrentHandle(var WndTitle : ShortString) : HWND;
+function GetCurrentHandle(out WndTitle : ShortString) : HWND;
 function LongMax(i, j : LongInt) : LongInt;
 function LongMin(i, j : LongInt) : LongInt;
 procedure SendText(const S : WideString);
 function GenerateRandom8Chars : AnsiString;
-procedure ReadLnFromString(const FromString : AnsiString; var ZeroBasedOffset : integer; var ToString : AnsiString);
+procedure ReadLnFromString(const FromString : AnsiString; var ZeroBasedOffset : integer; out ToString : AnsiString);
+function StrRepl(const ReplaceIn, ReplaceWhat, ReplaceWith : AnsiString) : AnsiString;
 
 Implementation
 
-uses SysUtils, StrUtils, Wcrypt2, InitUnit;
+uses Windows, SysUtils, StrUtils, Wcrypt2, InitUnit;
 
 function AnsiCharPosEx(const c : ansichar; const S : ansistring; const StartFromPosition : integer) : integer;
 var i : integer;
@@ -75,6 +78,7 @@ end;
 
 function StrToUnicodeUnderCodePage(const S : ANSIString; CodePage : cardinal) : WideString;
 begin
+ Result := ''; // to make the compiler 'happy'
  SetLength(Result, 2 * (Length(S) + 1));
  SetLength(Result, MultiByteToWideChar(CodePage,	// code page
                                        0, // DWORD  dwFlags, // character-type options
@@ -90,6 +94,7 @@ function UnicodeToStrUnderCodePage(const S               : WideString;
                                          UnmappablePChar : Pointer) : ANSIString;
 const WC_NO_BEST_FIT_CHARS = $00000400;
 begin
+ Result := ''; // to make the compiler 'happy'
  SetLength(Result, 4 * (Length(S) + 1));
  if CodePage = CP_UTF8
  then SetLength(Result, WideCharToMultiByte(CodePage,	// code page
@@ -114,7 +119,7 @@ end;
 
 // Returns a Windows handle of the currently focused control and
 // the foreground window caption. To activate it later, use SetForegroundWindow()
-function GetCurrentHandle(var WndTitle : ShortString) : HWND;
+function GetCurrentHandle(out WndTitle : ShortString) : HWND;
 var ActiveWinHandle : HWND;
     FocusedThreadID : DWORD;
 begin
@@ -137,15 +142,16 @@ const KEYEVENTF_UNICODE = $0004;
 var I  : Integer;
     TI : TInput;
 begin
+ TI._Type := INPUT_KEYBOARD; // to make the comipler 'happy'
  FillChar(TI, sizeof(TI), 0);
- TI.Itype := INPUT_KEYBOARD;
+ TI._Type := INPUT_KEYBOARD;
  for I := 1 to Length(S) do begin
   TI.ki.dwFlags := KEYEVENTF_UNICODE;
   TI.ki.wScan := Ord(S[I]);
-  SendInput(1, TI, SizeOf(TI));
+  SendInput(1, @TI, SizeOf(TI));
   sleep(10);
   TI.ki.dwFlags := TI.ki.dwFlags or KEYEVENTF_KEYUP;
-  SendInput(1, TI, SizeOf(TI));
+  SendInput(1, @TI, SizeOf(TI));
   sleep(10)
  end
 end;
@@ -188,6 +194,7 @@ var i                     : integer;
     GeneratedWithCryptLib : boolean;
 
 begin
+ Buffer[0] := 0; // to make the compiler "happy"
  GeneratedWithCryptLib := CryptAcquireContext(@hCryptProvider, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, 0) or
                           CryptAcquireContext(@hCryptProvider, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_NEWKEYSET);
  if GeneratedWithCryptLib then begin
@@ -198,7 +205,7 @@ begin
 
  if not GeneratedWithCryptLib then for i := 0 to sizeof(Buffer) - 1 do  begin Randomize(); Buffer[i] := random(ALLOWED_CHAR_COUNT) end;
 
- SetLength(Result, sizeof(Buffer));
+ Result := ''; SetLength(Result, sizeof(Buffer));
  for i := 1 to sizeof(Buffer) do Result[i] := AllowedChars[Buffer[i - 1]];
 
  if AnsiSetPos(AllowedSymbols, Result) <= 0 then begin
@@ -219,7 +226,7 @@ begin
  end;
 end;
 
-procedure ReadLnFromString(const FromString : AnsiString; var ZeroBasedOffset : integer; var ToString : AnsiString);
+procedure ReadLnFromString(const FromString : AnsiString; var ZeroBasedOffset : integer; out ToString : AnsiString);
 var i : integer;
 begin
  i := AnsiCharPosEx(#10, FromString, ZeroBasedOffset + 1);
@@ -228,4 +235,17 @@ begin
  ZeroBasedOffset := i
 end;
 
+function StrRepl(const ReplaceIn, ReplaceWhat, ReplaceWith : AnsiString) : AnsiString;
+var i : integer;
+begin
+ Result := ReplaceIn;
+ i := Pos(ReplaceWhat, Result);
+ while i > 0 do begin
+  Delete(Result, i, Length(ReplaceWhat));
+  Insert(ReplaceWith, Result, i);
+  i := PosEx(ReplaceWhat, Result, i)
+ end
+end;
+
 End.
+
