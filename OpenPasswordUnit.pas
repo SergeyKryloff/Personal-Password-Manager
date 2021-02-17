@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -13,10 +13,12 @@
 
 unit OpenPasswordUnit;
 
+{$MODE Delphi}
+
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  LCLIntf, LCLType, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls;
 
 type
@@ -39,7 +41,7 @@ type
 
 implementation
 
-{$R *.dfm}
+{$R *.lfm}
 
 procedure TOpenPasswordForm.FormCreate(Sender: TObject);
 begin
