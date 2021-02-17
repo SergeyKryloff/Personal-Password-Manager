@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -12,6 +12,8 @@
 {$B-,I-,Q-,S-,R-,A+,J+}
 
 Unit InitUnit;
+
+{$MODE Delphi}
 
 Interface
 
@@ -23,7 +25,7 @@ var AlreadyRunning : boolean;
 
 Implementation
 
-Uses Windows, Messages;
+Uses LCLIntf, LCLType, Windows;
 
 function CheckExistingInstance : boolean;
 var PreviousInstanceWnd : HWND;
