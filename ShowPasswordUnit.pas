@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -13,10 +13,12 @@
 
 unit ShowPasswordUnit;
 
+{$MODE Delphi}
+
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  LCLIntf, LCLType, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls;
 
 type
@@ -41,7 +43,9 @@ var
 
 implementation
 
-{$R *.dfm}
+{$R *.lfm}
+
+uses Windows;
 
 procedure TShowPasswordForm.OkButtonClick(Sender: TObject);
 begin
@@ -55,7 +59,9 @@ const IDI_ASTERISK = 32516;
 var h : HICON;
 begin
  h := LoadStandardIcon(0, IDI_ASTERISK);
+ {$warnings off}
  DrawIconEx(InfoImage.Canvas.Handle, 0, 0, h, InfoImage.Width, InfoImage.Height, 0, InfoImage.Canvas.Brush.Handle, DI_NORMAL);
+ {$warnings on}
 end;
 
 procedure TShowPasswordForm.ShowKeywordCheckBoxClick(Sender: TObject);
