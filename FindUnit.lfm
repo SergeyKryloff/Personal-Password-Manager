@@ -1,0 +1,66 @@
+object FindForm: TFindForm
+  Left = 795
+  Top = 250
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsToolWindow
+  Caption = 'Find pattern within descriptions'
+  ClientHeight = 70
+  ClientWidth = 324
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  FormStyle = fsStayOnTop
+  Position = poMainFormCenter
+  OnClose = FormClose
+  PixelsPerInch = 96
+  object FindWhatLabel: TLabel
+    Left = 8
+    Top = 12
+    Width = 49
+    Height = 13
+    Caption = '&Find what:'
+    FocusControl = FindTextEdit
+  end
+  object FindTextEdit: TEdit
+    Left = 64
+    Top = 8
+    Width = 249
+    Height = 21
+    TabOrder = 0
+    OnChange = FindTextEditChange
+  end
+  object PreviousButton: TButton
+    Left = 152
+    Top = 32
+    Width = 73
+    Height = 25
+    Caption = '<< &Previous'
+    Enabled = False
+    TabOrder = 2
+    OnClick = PreviousButtonClick
+  end
+  object NextButton: TButton
+    Left = 64
+    Top = 32
+    Width = 73
+    Height = 25
+    Caption = '&Next >>'
+    Default = True
+    Enabled = False
+    TabOrder = 1
+    OnClick = NextButtonClick
+  end
+  object CloseButton: TButton
+    Left = 240
+    Top = 32
+    Width = 73
+    Height = 25
+    Cancel = True
+    Caption = '&Close'
+    TabOrder = 3
+    OnClick = CloseButtonClick
+  end
+end
