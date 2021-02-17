@@ -1,259 +1,262 @@
 object SavePasswordForm: TSavePasswordForm
   Left = 444
+  Height = 355
   Top = 251
+  Width = 370
   BorderStyle = bsToolWindow
   Caption = 'Encrypt and save data'
   ClientHeight = 355
   ClientWidth = 370
   Color = clBtnFace
-  Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
-  Font.Style = []
-  OldCreateOrder = False
-  Position = poMainFormCenter
   OnCreate = FormCreate
   OnShow = PasswordEditChange
-  PixelsPerInch = 96
-  TextHeight = 13
+  Position = poMainFormCenter
+  LCLVersion = '2.0.10.0'
   object PasswordLabel: TLabel
     Left = 8
+    Height = 13
     Top = 8
     Width = 213
-    Height = 13
     Caption = '&Specify a keyword to protect passwords with:'
     FocusControl = PasswordEdit
+    ParentColor = False
   end
   object ConfirmPasswordLabel: TLabel
     Left = 8
+    Height = 13
     Top = 56
     Width = 104
-    Height = 13
     Caption = '&Confirm your keyword:'
     FocusControl = ConfirmPasswordEdit
-    Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
-    Font.Style = []
+    ParentColor = False
     ParentFont = False
   end
   object PasswordEdit: TEdit
     Left = 8
+    Height = 21
     Top = 24
     Width = 354
-    Height = 21
+    EchoMode = emPassword
+    OnChange = PasswordEditChange
     PasswordChar = '*'
     TabOrder = 0
-    OnChange = PasswordEditChange
   end
   object OkButton: TButton
     Left = 206
+    Height = 25
     Top = 322
     Width = 75
-    Height = 25
     Caption = 'OK'
     Default = True
-    TabOrder = 5
     OnClick = OkButtonClick
+    TabOrder = 5
   end
   object ConfirmPasswordEdit: TEdit
     Left = 8
+    Height = 21
     Top = 72
     Width = 354
-    Height = 21
+    EchoMode = emPassword
+    OnChange = PasswordEditChange
     PasswordChar = '*'
     TabOrder = 1
-    OnChange = PasswordEditChange
   end
   object ShowKeywordCheckBox: TCheckBox
     Left = 16
+    Height = 19
     Top = 326
-    Width = 97
-    Height = 17
+    Width = 90
     Caption = 'Show &keyword'
-    TabOrder = 3
     OnClick = ShowKeywordCheckBoxClick
+    TabOrder = 3
   end
   object CancelButton: TButton
     Left = 287
+    Height = 25
     Top = 322
     Width = 75
-    Height = 25
     Cancel = True
     Caption = 'Cancel'
-    TabOrder = 6
     OnClick = CancelButtonClick
+    TabOrder = 6
   end
   object StrengthGroupBox: TGroupBox
     Left = 8
-    Top = 112
+    Height = 212
+    Top = 104
     Width = 354
-    Height = 204
     Caption = ' The keyword strength: weak  '
+    ClientHeight = 194
+    ClientWidth = 350
     TabOrder = 2
     object KeyWordLengthLabel: TLabel
-      Left = 24
-      Top = 17
-      Width = 202
+      Left = 31
       Height = 13
+      Top = 9
+      Width = 202
       Caption = 'Length exceeds 15 characters (currently 0)'
+      ParentColor = False
     end
     object IncludesSymbolsLabel: TLabel
-      Left = 24
-      Top = 40
-      Width = 179
+      Left = 31
       Height = 13
+      Top = 32
+      Width = 179
       Caption = 'Includes symbols (e.g. @#$%^&*_-+=?)'
+      ParentColor = False
     end
     object IncludesNumbersLabel: TLabel
-      Left = 24
-      Top = 63
-      Width = 161
+      Left = 31
       Height = 13
+      Top = 55
+      Width = 161
       Caption = 'Includes numbers (e.g. 23456789)'
+      ParentColor = False
     end
     object IncludesLowercaseLabel: TLabel
-      Left = 24
-      Top = 86
-      Width = 225
+      Left = 31
       Height = 13
+      Top = 78
+      Width = 225
       Caption = 'Includes lowercase characters (e.g. abcdefg ...)'
+      ParentColor = False
     end
     object IncludesUppercaseLabel: TLabel
-      Left = 24
-      Top = 109
-      Width = 238
+      Left = 31
       Height = 13
+      Top = 101
+      Width = 238
       Caption = 'Includes uppercase characters (e.g. ABCDEFG ...)'
+      ParentColor = False
     end
     object ExcludesSimilarLabel: TLabel
-      Left = 24
-      Top = 132
-      Width = 246
+      Left = 31
       Height = 13
+      Top = 123
+      Width = 246
       Caption = 'Excludes similar characters (e.g. i, l, |, !, 1, L, o, 0, O)'
+      ParentColor = False
     end
     object ExcludesAmbiguousLabel: TLabel
-      Left = 24
-      Top = 155
-      Width = 313
+      Left = 31
       Height = 13
-      Caption = 
-        'Excludes ambiguous characters ( { } [ ] ( ) / \< > '#39' " ` ~ ; : .' +
-        ' , space)'
+      Top = 147
+      Width = 313
+      Caption = 'Excludes ambiguous characters ( { } [ ] ( ) / \< > '' " ` ~ ; : . , space)'
+      ParentColor = False
     end
     object ExcludesNonLatinCharsLabel: TLabel
-      Left = 24
-      Top = 178
-      Width = 321
+      Left = 31
       Height = 13
-      Caption = 
-        'Excludes non-Latin characters (National ones such as '#198', '#216', '#230' ...' +
-        ')   '
+      Top = 170
+      Width = 321
+      Caption = 'Excludes non-Latin characters (National ones such as Æ, Ø, æ ...)   '
+      ParentColor = False
     end
     object IncludesSymbolsCheckBox: TCheckBox
       Left = 8
-      Top = 39
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 30
+      Width = 20
       Enabled = False
       TabOrder = 1
+      TabStop = False
     end
     object IncludesNumbersCheckBox: TCheckBox
       Left = 8
-      Top = 62
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 53
+      Width = 20
       Enabled = False
       TabOrder = 2
+      TabStop = False
     end
     object IncludesLowercaseCheckBox: TCheckBox
       Left = 8
-      Top = 85
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 76
+      Width = 20
       Enabled = False
       TabOrder = 3
+      TabStop = False
     end
     object IncludesUppercaseCheckBox: TCheckBox
       Left = 8
-      Top = 108
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 99
+      Width = 20
       Enabled = False
       TabOrder = 4
+      TabStop = False
     end
     object KeyWordLengthCheckBox: TCheckBox
       Left = 8
-      Top = 16
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 6
+      Width = 20
       Color = clBtnFace
       Enabled = False
-      Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -11
       Font.Name = 'MS Sans Serif'
-      Font.Style = []
       ParentColor = False
       ParentFont = False
       TabOrder = 0
+      TabStop = False
     end
     object ExcludesSimilarCheckBox: TCheckBox
       Left = 8
-      Top = 131
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 121
+      Width = 20
       Checked = True
       Enabled = False
       State = cbChecked
       TabOrder = 5
+      TabStop = False
     end
     object ExcludesAmbiguousCheckBox: TCheckBox
       Left = 8
-      Top = 154
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 145
+      Width = 20
       Checked = True
       Enabled = False
       State = cbChecked
       TabOrder = 6
+      TabStop = False
     end
     object ExcludesNonLatinCharsCheckBox: TCheckBox
       Left = 8
-      Top = 177
-      Width = 17
-      Height = 17
-      TabStop = False
+      Height = 19
+      Top = 168
+      Width = 20
       Checked = True
       Enabled = False
-      Font.Charset = ANSI_CHARSET
+      Font.CharSet = ANSI_CHARSET
       Font.Color = clWindowText
       Font.Height = -11
       Font.Name = 'MS Sans Serif'
-      Font.Style = []
       ParentFont = False
       State = cbChecked
       TabOrder = 7
+      TabStop = False
     end
   end
   object MakeRandomButton: TButton
     Left = 125
+    Height = 25
     Top = 322
     Width = 75
-    Height = 25
     Caption = 'Make random'
     Enabled = False
-    TabOrder = 4
     OnClick = MakeRandomButtonClick
+    TabOrder = 4
   end
 end

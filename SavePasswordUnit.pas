@@ -2,7 +2,7 @@
 {                                                                      }
 { Developed by Sergey A. Kryloff under the GNU General Public License. }
 {                                                                      }
-{ Software distributed under the License is distributed on an          }
+{ Software distributed under the License is provided on an             }
 { "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either expressed or     }
 { implied. See the License for the specific language governing         }
 { rights and limitations under the License.                            }
@@ -16,7 +16,7 @@ unit SavePasswordUnit;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls;
 
 type
@@ -129,7 +129,7 @@ var AnsiPassword : AnsiString;
 
 begin
  OkButton.Enabled := ShowKeywordCheckBox.Checked or (PasswordEdit.Text = ConfirmPasswordEdit.Text);
- AnsiPassword := AnsiString(PasswordEdit.Text);
+ AnsiPassword := UnicodeToStrUnderCodePage(StrToUnicodeUnderCodePage(PasswordEdit.Text, CP_UTF8), CP_ASCII, Nil);
  KeyWordLengthLabel.Caption := 'Length exceeds 15 characters (currently, ' + IntToStr(Length(PasswordEdit.Text)) + ')';
 
  CheckedCount := 0;
@@ -162,7 +162,8 @@ begin
  ExcludesAmbiguousLabel.Font.Color := FontColour[ExcludesAmbiguousCheckBox.Checked];
 
  ExcludesNonLatinCharsCheckBox.Checked := (AnsiSetPos(NationalChars, AnsiPassword) <= 0) and
-                                          (WideString(AnsiPassword) = PasswordEdit.Text);
+                                          (StrToUnicodeUnderCodePage(AnsiPassword, CP_ASCII) =
+                                           StrToUnicodeUnderCodePage(PasswordEdit.Text, CP_UTF8));
  Inc(CheckedCount, byte(ExcludesNonLatinCharsCheckBox.Checked));
  ExcludesNonLatinCharsLabel.Font.Color := FontColour[ExcludesNonLatinCharsCheckBox.Checked];
 
