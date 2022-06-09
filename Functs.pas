@@ -21,6 +21,8 @@ uses LCLIntf, LCLType;
 
 type TANsiCharSet = set of AnsiChar;
 
+const UTF8Prefix    : packed array[0..2] of char = (#239, #187, #191);
+
 function AnsiCharPosEx(const c : ansichar; const S : ansistring; const StartFromPosition : integer) : integer;
 function AnsiTrim(const S : AnsiString) : AnsiString;
 function AnsiSetPos(const Symbols : TANsiCharSet; const S : AnsiString) : integer;
@@ -37,10 +39,11 @@ procedure SendText(const S : WideString);
 function GenerateRandom8Chars : AnsiString;
 procedure ReadLnFromString(const FromString : AnsiString; var ZeroBasedOffset : integer; out ToString : AnsiString);
 function StrRepl(const ReplaceIn, ReplaceWhat, ReplaceWith : AnsiString) : AnsiString;
+function FileToString(const FileName : string; RemoveUTF8Prefix : boolean) : string;
 
 Implementation
 
-uses Windows, SysUtils, StrUtils, Wcrypt2, InitUnit;
+uses Windows, SysUtils, StrUtils, InitUnit;
 
 function AnsiCharPosEx(const c : ansichar; const S : ansistring; const StartFromPosition : integer) : integer;
 var i : integer;
@@ -190,40 +193,26 @@ const ALLOWED_NUMBER_COUNT = 8; // 0..9 but 0 and 1
 
 var i                     : integer;
     Buffer                : array[0..7] of byte;
-    hCryptProvider        : HCRYPTPROV;
-    GeneratedWithCryptLib : boolean;
 
 begin
- Buffer[0] := 0; // to make the compiler "happy"
- GeneratedWithCryptLib := CryptAcquireContext(@hCryptProvider, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, 0) or
-                          CryptAcquireContext(@hCryptProvider, ApplicationTitleUntyped, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_NEWKEYSET);
- if GeneratedWithCryptLib then begin
-  GeneratedWithCryptLib := CryptGenRandom(hCryptProvider, sizeof(Buffer), @Buffer);
-  if GeneratedWithCryptLib then for i := 0 to sizeof(Buffer) - 1 do Buffer[i] := Buffer[i] MOD ALLOWED_CHAR_COUNT;
-  if not CryptReleaseContext(hCryptProvider, 0) then GeneratedWithCryptLib := false
- end;
+ Randomize();
 
- if not GeneratedWithCryptLib then for i := 0 to sizeof(Buffer) - 1 do  begin Randomize(); Buffer[i] := random(ALLOWED_CHAR_COUNT) end;
+ for i := 0 to sizeof(Buffer) - 1 do Buffer[i] := random(ALLOWED_CHAR_COUNT);
 
  Result := ''; SetLength(Result, sizeof(Buffer));
  for i := 1 to sizeof(Buffer) do Result[i] := AllowedChars[Buffer[i - 1]];
 
- if AnsiSetPos(AllowedSymbols, Result) <= 0 then begin
-  Randomize();
-  Result := Result + AllowedSymbol[random(ALLOWED_SYMBOL_COUNT)]
- end;
- if AnsiSetPos(AllowedNumbers, Result) <= 0 then begin
-  Randomize();
-  Result := Result + AllowedNumber[random(ALLOWED_NUMBER_COUNT)]
- end;
- if AnsiSetPos(AllowedLowercaseChars, Result) <= 0 then begin
-  Randomize();
-  Result := Result + AllowedLowercaseChar[random(ALLOWED_LOWERCASE_CHAR_COUNT)]
- end;
- if AnsiSetPos(AllowedUppercaseChars, Result) <= 0 then begin
-  Randomize();
-  Result := Result + AllowedUppercaseChar[random(ALLOWED_UPPERCASE_CHAR_COUNT)]
- end;
+ if AnsiSetPos(AllowedSymbols, Result) <= 0
+ then Result := Result + AllowedSymbol[random(ALLOWED_SYMBOL_COUNT)];
+
+ if AnsiSetPos(AllowedNumbers, Result) <= 0
+ then Result := Result + AllowedNumber[random(ALLOWED_NUMBER_COUNT)];
+
+ if AnsiSetPos(AllowedLowercaseChars, Result) <= 0
+ then Result := Result + AllowedLowercaseChar[random(ALLOWED_LOWERCASE_CHAR_COUNT)];
+
+ if AnsiSetPos(AllowedUppercaseChars, Result) <= 0
+ then Result := Result + AllowedUppercaseChar[random(ALLOWED_UPPERCASE_CHAR_COUNT)];
 end;
 
 procedure ReadLnFromString(const FromString : AnsiString; var ZeroBasedOffset : integer; out ToString : AnsiString);
@@ -232,7 +221,10 @@ begin
  i := AnsiCharPosEx(#10, FromString, ZeroBasedOffset + 1);
  if i <= 0 then i := Length(FromString) + 1;
  ToString := copy(FromString, ZeroBasedOffset + 1, i - ZeroBasedOffset - 1);
- ZeroBasedOffset := i
+ ZeroBasedOffset := i;
+ i := Length(ToString);
+ if (i > 0) and (ToString[i] = #13)
+ then Delete(ToString, i, 1);
 end;
 
 function StrRepl(const ReplaceIn, ReplaceWhat, ReplaceWith : AnsiString) : AnsiString;
@@ -245,6 +237,40 @@ begin
   Insert(ReplaceWith, Result, i);
   i := PosEx(ReplaceWhat, Result, i)
  end
+end;
+
+function FileToString(const FileName : string; RemoveUTF8Prefix : boolean) : string;
+var F          : file;
+    FSize      : integer;
+    FilePrefix : packed array[0..2] of char;
+begin
+ Result := '';
+ FileMode := 0;
+ Assign(F, FileName); Reset(F, 1);
+ FSize := FileSize(F);
+ if FSize > 0 then begin
+  if RemoveUTF8Prefix and (FSize >= 3) then begin
+   FilePrefix[0] := #0; // to make compiler happy
+   BlockRead(F, FilePrefix, sizeof(FilePrefix));
+   if (FilePrefix[0] = UTF8Prefix[0]) and
+      (FilePrefix[1] = UTF8Prefix[1]) and
+      (FilePrefix[2] = UTF8Prefix[2])
+   then begin
+    SetLength(Result, FSize - 3);
+    BlockRead(F, Result[1], Length(Result))
+   end else begin
+    SetLength(Result, FSize);
+    Result[1] := FilePrefix[0];
+    Result[2] := FilePrefix[1];
+    Result[3] := FilePrefix[2];
+    BlockRead(F, Result[4], (Length(Result) - 3))
+   end
+  end else begin
+   SetLength(Result, FSize);
+   BlockRead(F, Result[1], Length(Result))
+  end
+ end;
+ Close(F);
 end;
 
 End.

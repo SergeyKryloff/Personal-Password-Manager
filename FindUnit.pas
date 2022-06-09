@@ -22,6 +22,9 @@ uses
   Dialogs, StdCtrls;
 
 type
+
+  { TFindForm }
+
   TFindForm = class(TForm)
     FindWhatLabel: TLabel;
     FindTextEdit: TEdit;
@@ -72,3 +75,24 @@ begin
 end;
 
 end.
+(*
+procedure TFindForm.FormActivate(Sender: TObject);
+var i         : integer;
+    TopicList : TStringList;
+begin
+ TopicList := TStringList.Create();
+ MainUnit.MainForm.FillInTopicList(TopicList);
+
+ for i := 0 to TopicList.Count - 1 do
+ if SearchInComboBox.Items.IndexOf(TopicList.Strings[i]) < 0
+ then SearchInComboBox.Items.Append(TopicList.Strings[i]);
+
+ for i := SearchInComboBox.Items.Count - 1 downto 0 do
+ if TopicList.IndexOf(SearchInComboBox.Items.Strings[i]) < 0
+ then SearchInComboBox.Items.Delete(i);
+
+ SearchInComboBox.Items.Append('*** All items regardless of the topic ***');
+ TopicList.Free();
+end;
+*)
+

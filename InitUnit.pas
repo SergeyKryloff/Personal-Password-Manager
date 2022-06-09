@@ -21,22 +21,30 @@ const ApplicationTitleUntyped = 'The Kryloff Personal Password Manager';
       ApplicationTitleAsShortstring : ShortString = ApplicationTitleUntyped;
       ApplicationTitleAsString      : String      = ApplicationTitleUntyped;
 
-var AlreadyRunning : boolean;
+var AlreadyRunning : boolean = False;
 
 Implementation
 
-Uses LCLIntf, LCLType, Windows;
+Uses LCLIntf, LCLType, Windows, SysUtils;
 
-function CheckExistingInstance : boolean;
-var PreviousInstanceWnd : HWND;
+function ExistingInstanceFunc(h : HWND; l : LPARAM) : WinBool; stdcall;
+var Caption : packed array[0..255] of char;
 begin
- PreviousInstanceWnd := FindWindowA(Nil { 'TMainForm' }, ApplicationTitleUntyped);
- Result := PreviousInstanceWnd <> 0;
- if Result then SetForegroundWindow(PreviousInstanceWnd)
+ Caption[255] := #0;
+ if (GetWindowText(h, caption, sizeof(caption) - 1) > 0) and
+    (strpos(Caption, ApplicationTitleUntyped) <> Nil)
+ then begin
+  AlreadyRunning := True;
+  ShowWindow(h, SW_RESTORE);
+  SetForegroundWindow(h);
+  PostMessage(h, WM_USER + 2, 0, 0);
+  Result := FALSE
+ end else begin
+  Result := TRUE
+ end
 end;
 
-
 Initialization
- AlreadyRunning := CheckExistingInstance();
+ EnumChildWindows(0, @ExistingInstanceFunc, 0);
 
 End.
